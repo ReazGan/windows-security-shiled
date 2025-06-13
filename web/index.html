@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows Güvenlik Kalkanı</title>
+    <script type="text/javascript" src="/eel.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+        :root {
+            --bg-dark: #1a1c23; --bg-medium: #23272f; --bg-light: #2c313a;
+            --accent: #00aaff; --text-light: #f0f0f0; --text-dark: #a0a0a0;
+            --success: #28a745; --warning: #ffc107; --danger: #dc3545;
+        }
+        body {
+            font-family: 'Roboto', sans-serif; background-color: var(--bg-dark);
+            color: var(--text-light); margin: 0; display: flex; height: 100vh;
+        }
+        .sidebar {
+            width: 240px; background-color: var(--bg-medium); padding: 20px;
+            display: flex; flex-direction: column; flex-shrink: 0;
+            border-right: 1px solid var(--bg-light);
+        }
+        .sidebar h1 {
+            font-size: 1.5em; text-align: center; color: var(--accent);
+            margin: 0 0 40px 0;
+        }
+        .sidebar .nav-menu a {
+            display: block; color: var(--text-dark); text-decoration: none;
+            padding: 15px 20px; margin-bottom: 10px; border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .sidebar .nav-menu a:hover, .sidebar .nav-menu a.active {
+            background-color: var(--accent); color: white;
+            box-shadow: 0 0 15px rgba(0, 170, 255, 0.4);
+        }
+        .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        .page { display: none; animation: fadeIn 0.5s ease; }
+        .page.active { display: block; }
+        h2 { border-bottom: 2px solid var(--bg-light); padding-bottom: 10px; margin-top: 0; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .status-card { background-color: var(--bg-medium); padding: 20px; border-radius: 8px; border-left: 5px solid var(--accent); }
+        .status-card h3 { margin: 0 0 10px 0; }
+        .status-card .status { font-size: 1.2em; font-weight: bold; word-break: break-word; }
+        .status.ok { color: var(--success); }
+        .status.bad { color: var(--danger); }
+        
+        .table-container { max-height: 75vh; overflow-y: auto; border: 1px solid var(--bg-light); border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 15px; text-align: left; white-space: nowrap; }
+        td.path { white-space: normal; word-break: break-all; }
+        thead tr { background-color: var(--bg-light); position: sticky; top: 0; z-index: 1; }
+        tbody tr:nth-child(even) { background-color: var(--bg-medium); }
+        tbody tr:hover { background-color: var(--bg-light); }
+        /* Şüpheli satırları vurgulama stili */
+        .suspicious-row { background-color: rgba(255, 193, 7, 0.1) !important; }
+        .suspicious-row:hover { background-color: rgba(255, 193, 7, 0.2) !important; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; text-align: center; display: inline-block; }
+        .status-safe { background-color: var(--success); color: white; }
+        .status-suspicious { background-color: var(--warning); color: var(--bg-dark); }
+        .status-unknown { background-color: var(--text-dark); color: var(--bg-dark); }
+        .center-text { text-align: center; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .loader { width: 20px; height: 20px; border: 3px solid var(--bg-light); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; }
+        .action-btn { background-color: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
+        .action-btn:hover { background-color: #c82333; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h1>🛡️ Güvenlik Kalkanı</h1>
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active" data-page="dashboard">Güvenlik Paneli</a>
+            <a href="#" class="nav-item" data-page="processes">Çalışan İşlemler</a>
+            <a href="#" class="nav-item" data-page="startup">Başlangıç Programları</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div id="dashboard" class="page active"><h2>Genel Durum</h2><div class="status-grid"><div class="status-card"><h3>Antivirüs Durumu</h3><p id="av-status" class="status">Yükleniyor...</p></div><div class="status-card"><h3>Güvenlik Duvarı</h3><p id="fw-status" class="status">Yükleniyor...</p></div></div></div>
+        
+        <div id="processes" class="page">
+            <h2>Çalışan İşlemler</h2>
+            <div class="table-container">
+                <table id="process-table">
+                    <thead>
+                        <tr>
+                            <th>PID</th><th>İsim</th><th>Durum</th><th>Kullanıcı</th><th>CPU (%)</th><th>Bellek (MB)</th><th>Eylemler</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="startup" class="page">
+            <h2>Başlangıç Programları</h2>
+            <div class="table-container">
+                <table id="startup-table">
+                    <thead>
+                        <tr>
+                            <th>Program Adı</th>
+                            <th>Dosya Yolu</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navItems = document.querySelectorAll('.nav-item');
+            const pages = document.querySelectorAll('.page');
+
+            navItems.forEach(item => {
+                item.addEventListener('click', e => {
+                    e.preventDefault();
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    pages.forEach(page => page.classList.remove('active'));
+                    item.classList.add('active');
+                    const pageId = item.getAttribute('data-page');
+                    document.getElementById(pageId).classList.add('active');
+                    
+                    if (pageId === 'dashboard') loadDashboardData();
+                    else if (pageId === 'processes') loadProcessesData();
+                    else if (pageId === 'startup') loadStartupData();
+                });
+            });
+
+            async function loadDashboardData() {
+                const avStatusEl = document.getElementById('av-status');
+                const fwStatusEl = document.getElementById('fw-status');
+                avStatusEl.innerHTML = '<div class="loader"></div>';
+                fwStatusEl.innerHTML = '<div class="loader"></div>';
+                try {
+                    const status = await eel.get_security_status()();
+                    avStatusEl.textContent = status.antivirus;
+                    fwStatusEl.textContent = status.firewall;
+                    avStatusEl.className = status.antivirus.includes('Aktif') ? 'status ok' : 'status bad';
+                    fwStatusEl.className = status.firewall.includes('Aktif') ? 'status ok' : 'status bad';
+                } catch(e) { console.error("Dashboard verisi alınamadı:", e); }
+            }
+
+            async function loadProcessesData() {
+                const tableBody = document.querySelector('#process-table tbody');
+                tableBody.innerHTML = `<tr><td colspan="7"><div class="center-text"><div class="loader"></div><span>İşlemler yükleniyor...</span></div></td></tr>`;
+                try {
+                    const processes = await eel.get_running_processes()();
+                    tableBody.innerHTML = ''; 
+                    if (processes && processes.length > 0) {
+                        processes.forEach(proc => {
+                            const row = document.createElement('tr');
+                            const reputation = proc.reputation || 'Bilinmiyor';
+                            let statusClass = 'status-unknown';
+                            if(reputation === 'Güvenli') statusClass = 'status-safe';
+                            if(reputation === 'Potansiyel Şüpheli') {
+                                statusClass = 'status-suspicious';
+                                row.classList.add('suspicious-row');
+                            }
+                            
+                            row.innerHTML = `
+                                <td>${proc.pid}</td>
+                                <td>${proc.name}</td>
+                                <td><span class="status-badge ${statusClass}">${reputation}</span></td>
+                                <td>${proc.username || 'N/A'}</td>
+                                <td>${proc.cpu_percent.toFixed(2)}</td>
+                                <td>${proc.memory_mb}</td>
+                                <td><button class="action-btn" data-pid="${proc.pid}">Sonlandır</button></td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                        document.querySelectorAll('.action-btn').forEach(btn => {
+                            btn.addEventListener('click', async (e) => {
+                                const pid = e.target.getAttribute('data-pid');
+                                const processName = e.target.closest('tr').children[1].textContent;
+                                if(confirm(`'${processName}' (PID: ${pid}) işlemini sonlandırmak istediğinizden emin misiniz?`)) {
+                                    const result = await eel.terminate_process(parseInt(pid))();
+                                    alert(result.message);
+                                    loadProcessesData(); 
+                                }
+                            });
+                        });
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="7" class="center-text">İşlem listesi alınamadı veya liste boş.</td></tr>';
+                    }
+                } catch (error) { console.error("İşlemler yüklenirken JS hatası:", error); }
+            }
+
+            async function loadStartupData() {
+                const tableBody = document.querySelector('#startup-table tbody');
+                tableBody.innerHTML = `<tr><td colspan="2"><div class="center-text"><div class="loader"></div><span>Başlangıç programları yükleniyor...</span></div></td></tr>`;
+                try {
+                    const programs = await eel.get_startup_programs()();
+                    tableBody.innerHTML = '';
+                    if (programs && programs.length > 0) {
+                         programs.forEach(prog => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `<td>${prog.name}</td><td class="path">${prog.path}</td>`;
+                            tableBody.appendChild(row);
+                        });
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="2" class="center-text">Başlangıç programı bulunamadı.</td></tr>';
+                    }
+                } catch (error) { console.error("Başlangıç programları yüklenirken hata:", error); }
+            }
+            
+            loadDashboardData();
+        });
+    </script>
+</body>
+</ht
