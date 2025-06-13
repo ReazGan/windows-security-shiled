@@ -2,7 +2,11 @@
 Python ve modern web teknolojileri (HTML/CSS/JS) kullanılarak geliştirilmiş; Windows sistemlerinin güvenlik durumunu analiz eden, iyileştirmeler öneren ve kullanıcıya tam kontrol sağlayan bir masaüstü uygulaması.
 
 
-(Uygulamanın ana paneli)
+![image](https://github.com/user-attachments/assets/f04189ec-d0ce-4a9b-bfba-510d8ef6b904)
+
+![image](https://github.com/user-attachments/assets/97620057-92dc-4649-8583-c93d196757f4)
+
+
 🇹🇷 Türkçe
 🚀 Özellikler
 * Genel Güvenlik Durumu: Antivirüs ve Güvenlik Duvarı'nın aktif olup olmadığını tek bir panelde gösterir.
