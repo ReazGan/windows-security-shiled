@@ -5,9 +5,8 @@ import ctypes
 import wmi
 import psutil
 import os
-import winreg # Başlangıç programları için
+import winreg
 
-# Uygulamanın arayüz dosyalarının bulunduğu klasörü belirtiyoruz
 eel.init('web')
 
 def is_admin():
@@ -17,14 +16,11 @@ def is_admin():
     except:
         return False
 
-# --- YENİ: Güvenli ve Şüpheli Konumları Tanımlama ---
-# Genellikle güvenli olan sistem yolları
 SAFE_PATHS = [
     os.environ.get('SystemRoot', 'C:\\Windows').lower(),
     os.environ.get('ProgramFiles', 'C:\\Program Files').lower(),
     os.environ.get('ProgramFiles(x86)', 'C:\\Program Files (x86)').lower()
 ]
-# Potansiyel olarak şüpheli olan kullanıcı yolları
 SUSPICIOUS_PATHS = [
     os.environ.get('AppData', '').lower(),
     os.environ.get('LOCALAPPDATA', '').lower(),
@@ -74,19 +70,17 @@ def get_running_processes():
             p_info = p.as_dict(attrs=['pid', 'name', 'username', 'memory_info', 'exe', 'cpu_percent'])
             p_info['memory_mb'] = round(p_info['memory_info'].rss / (1024 * 1024), 2) if p_info.get('memory_info') else 0
             
-            # --- YENİ: İtibar Durumu Mantığı ---
-            p_info['reputation'] = 'Güvenli' # Varsayılan olarak güvenli
+            p_info['reputation'] = 'Güvenli'
             exe_path = (p_info.get('exe') or "").lower()
 
             if exe_path:
-                # Eğer dosya yolu şüpheli bir klasörde başlıyorsa ve sistem dosyası değilse
                 is_in_suspicious = any(exe_path.startswith(path) for path in SUSPICIOUS_PATHS if path)
                 is_in_safe = any(exe_path.startswith(path) for path in SAFE_PATHS if path)
 
                 if is_in_suspicious and not is_in_safe:
                     p_info['reputation'] = 'Potansiyel Şüpheli'
             else:
-                 p_info['reputation'] = 'Bilinmiyor' # Yolu alınamayanlar (genellikle sistemin çekirdek işlemleri)
+                 p_info['reputation'] = 'Bilinmiyor'
 
             processes.append(p_info)
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
@@ -98,7 +92,7 @@ def terminate_process(pid):
     """Verilen PID'ye sahip işlemi sonlandırır."""
     try:
         p = psutil.Process(pid)
-        p.terminate() # İşlemi sonlandır
+        p.terminate()
         print(f"[BAŞARI] PID {pid} olan işlem sonlandırıldı.")
         return {"success": True, "message": f"PID {pid} olan işlem sonlandırıldı."}
     except psutil.NoSuchProcess:
@@ -134,7 +128,6 @@ def get_startup_programs():
             
     return startup_programs
 
-# Ana program bloğu
 if __name__ == "__main__":
     if platform.system() == "Windows" and not is_admin():
         print("\n[HATA] YÖNETİCİ İZNİ GEREKLİ!")
@@ -143,3 +136,4 @@ if __name__ == "__main__":
         sys.exit(0)
             
     eel.start('index.html', size=(1280, 800), port=0)
+
